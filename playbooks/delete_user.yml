@@ -1,0 +1,29 @@
+---
+- name: Delete User
+  hosts: all
+  become: true
+  vars:
+    # Passed from Jenkins
+    target_user: "{{ new_user }}"
+
+  tasks:
+    - name: Fail if username is empty (Safety Check)
+      fail:
+        msg: "No username provided. Aborting to prevent accidents."
+      when: target_user is not defined or target_user | length == 0
+
+    - name: Remove user and home directory
+      user:
+        name: "{{ target_user }}"
+        state: absent
+        remove: yes  # This deletes /home/username
+        force: yes   # Kills user processes if running
+
+    - name: Verify deletion
+      command: "id {{ target_user }}"
+      register: user_check
+      ignore_errors: true
+
+    - debug:
+        msg: "User {{ target_user }} deleted successfully."
+      when: user_check.rc != 0
